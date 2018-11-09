@@ -1,0 +1,36 @@
+---
+- name: Build the image
+  hosts: localhost
+  connection: local
+
+  tasks:
+
+#   - name: upload the site directory to the docker host
+#     synchronize: src=site dest=/tmp
+#     register: sync_result
+
+   - name: build the image
+     docker_image:
+       name: eg_sshd
+       path: ./
+       state: present
+
+   - name: Create a container
+     docker_container:
+       name: test_sshd
+       image: eg_sshd:latest
+       state: started
+       recreate: yes
+       volumes:
+         - .:/var/www/html
+
+   - name: Install nginx
+     command: docker exec test_sshd apt-get install -y nginx 
+
+   - name: Start nginx
+     command: docker exec test_sshd /usr/sbin/nginx -g 'daemon on; master_process on;'
+
+   - name: Make page
+     tags: Make page
+     shell: docker exec test_sshd bash /var/www/html/info.sh > index.html
+
